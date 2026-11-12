@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>EBS Report Request</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one request sheet shared by 3 roles (requester, consultant, developer); role tabs on top, the active role's part is editable, the others read-only. Ahmed Gaid */
+:root{
+  --bg:#F2F4F3; --surface:#FFFFFF; --sunk:#E9EEEC; --ink:#15201E; --muted:#5A6965; --line:#D3DCD9;
+  --accent:#0E6B5E; --accent-ink:#FFFFFF; --accent-soft:#DFEEEA;
+  --r-req:#0E6B5E; --r-con:#7A4FA8; --r-dev:#2F5F9E;
+  --warn:#8F5600; --warn-soft:#FAEED6; --bad:#A3302A; --bad-soft:#F7E2E0; --good:#2B744A; --good-soft:#DFF0E5;
+  --f-ui:"IBM Plex Sans","IBM Plex Sans Arabic","Segoe UI",Tahoma,system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:8px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1413; --surface:#151D1B; --sunk:#1B2523; --ink:#E3EBE9; --muted:#93A39F; --line:#2B3734;
+  --accent:#4FB9A6; --accent-ink:#08110F; --accent-soft:#16302B;
+  --r-req:#4FB9A6; --r-con:#B593DD; --r-dev:#7FA8E0;
+  --warn:#E2A94E; --warn-soft:#332710; --bad:#E57C73; --bad-soft:#3A1C19; --good:#71C493; --good-soft:#15301F; color-scheme:dark}}
+html[lang=ar]{--f-ui:"IBM Plex Sans Arabic","IBM Plex Sans",Tahoma,"Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.55;margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+header.top .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1 1 240px}
+.brand b{font-size:18px}
+.brand span{color:var(--muted);font-size:13px}
+.lang{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 14px;font-weight:600}
+.roles{display:flex;gap:0;border-top:1px solid var(--line);overflow-x:auto}
+.roles button{flex:1 1 0;min-width:120px;border:none;background:transparent;color:var(--muted);padding:10px 8px;font-weight:600;font-size:14px;border-bottom:3px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px}
+.roles button small{font-weight:400;font-size:11.5px}
+.roles button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--rc)}
+.roles button[data-role=requester]{--rc:var(--r-req)} .roles button[data-role=consultant]{--rc:var(--r-con)} .roles button[data-role=developer]{--rc:var(--r-dev)}
+main .wrap{padding-block:20px 130px;display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.panel h2{margin:0;font-size:15px}
+.openrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.openrow label{flex:1 1 180px}
+.notice{border-radius:var(--r);padding:12px 14px;font-size:14px;background:var(--warn-soft)}
+.notice b{color:var(--warn)}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0;border-inline-start:4px solid var(--pc,var(--line))}
+section.card h3{margin:0 0 4px;font-size:16px;display:flex;gap:10px;align-items:baseline;text-wrap:balance}
+section.card h3 i{font-style:normal;font-family:var(--f-mono);font-size:12px;color:var(--pc);font-weight:500}
+section.card p.hint{margin:0 0 16px;color:var(--muted);font-size:13.5px;max-width:72ch}
+.p-requester{--pc:var(--r-req)} .p-consultant{--pc:var(--r-con)} .p-developer{--pc:var(--r-dev)}
+.parthead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.parthead h2{margin:0;font-size:18px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--ink)}
+.badge.edit{background:var(--accent-soft);color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.grid .full{grid-column:1/-1}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f>span{font-size:12.5px;font-weight:600;color:var(--muted)}
+.f>span em{color:var(--bad);font-style:normal}
+.f .v{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.5em}
+.f .v .none{color:var(--muted)}
+input[type=text],input[type=email],input[type=date],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+textarea{min-height:90px;resize:vertical}
+.mono{font-family:var(--f-mono);font-size:13.5px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:14px;cursor:pointer;background:var(--bg)}
+.checks input{accent-color:var(--accent)}
+.hp{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.rep{display:flex;flex-direction:column;gap:8px}
+.rep-head,.rep-row{display:grid;gap:8px;align-items:center}
+.rep-head{font-size:12px;font-weight:600;color:var(--muted);padding:0 2px}
+.rep-row .lbl{display:none;font-size:12px;font-weight:600;color:var(--muted)}
+.rep-row .cell{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rep-empty{color:var(--muted);font-size:13.5px;padding:10px;border:1px dashed var(--line);border-radius:6px;text-align:center}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:6px;font-weight:500;font-size:14px}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);padding-inline:6px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.x{border:none;background:transparent;color:var(--muted);width:30px;height:30px;border-radius:6px;font-size:18px;line-height:1}
+.x:hover{background:var(--bad-soft);color:var(--bad)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:start;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--sunk);font-size:12px;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:none}
+td.mono{font-family:var(--f-mono);font-size:12.5px;overflow-wrap:anywhere}
+details.ro{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);border-inline-start:4px solid var(--pc)}
+details.ro>summary{cursor:pointer;padding:14px 18px;font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap;list-style:none}
+details.ro>summary::-webkit-details-marker{display:none}
+details.ro>summary::before{content:"▸";color:var(--pc);transition:transform .15s}
+html[dir=rtl] details.ro>summary::before{content:"◂"}
+details.ro[open]>summary::before{transform:rotate(90deg)}
+html[dir=rtl] details.ro[open]>summary::before{transform:rotate(-90deg)}
+details.ro .body{padding:0 18px 18px;display:flex;flex-direction:column;gap:16px}
+details.ro .body h4{margin:0 0 8px;font-size:13.5px;color:var(--pc)}
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:20px;text-align:center;background:var(--bg);display:flex;flex-direction:column;gap:8px;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop small{color:var(--muted)}
+.files{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.file{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface);display:flex;flex-direction:column;min-width:0;color:inherit;text-decoration:none}
+.file .thumb{aspect-ratio:16/10;max-width:100%;background:var(--sunk);display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--f-mono);font-size:13px;overflow:hidden}
+.file .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.file .meta{padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.file .name{font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.file .sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.file select,.file input{padding:5px 8px;font-size:13px}
+.total{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.total.over{color:var(--bad);font-weight:600}
+.reqhead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.reqhead h1{margin:0;font-size:21px;flex:1 1 280px;text-wrap:balance;overflow-wrap:anywhere}
+.reqhead .ref{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:var(--sunk)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-New,.st-Approved-for-development,.st-In-development{background:var(--accent-soft);color:var(--accent)}
+.st-Consultant-review{background:var(--sunk);color:var(--r-con)}
+.st-Need-info{background:var(--warn-soft);color:var(--warn)}
+.st-In-UAT{background:var(--sunk);color:var(--r-dev)}
+.st-Done{background:var(--good-soft);color:var(--good)}
+.st-Not-planned{background:var(--bad-soft);color:var(--bad)}
+.msgs{display:flex;flex-direction:column;gap:8px}
+.msg{background:var(--warn-soft);border-radius:var(--r);padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg b{display:block;font-size:12.5px;color:var(--warn);margin-bottom:2px}
+.hist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.hist li{display:flex;gap:10px;flex-wrap:wrap}
+.hist time{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);min-width:130px}
+.submitbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.submitbar .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-block:10px}
+.submitbar .msgtext{flex:1 1 220px;color:var(--muted);font-size:13.5px;min-width:0}
+.submitbar select{width:auto;min-width:180px}
+.done{max-width:640px;margin:24px auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:28px;display:flex;flex-direction:column;gap:14px}
+.done h1{margin:0;font-size:22px}
+.done .bigref{font-family:var(--f-mono);font-size:20px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:8px 12px;align-self:flex-start;direction:ltr}
+.done p{margin:0;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:min(560px,calc(100vw - 32px));box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.example-banner{background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;font-size:14px}
+[dir=auto]{unicode-bidi:plaintext}
+@media (max-width:640px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .rep-head{display:none}
+  .rep-row{grid-template-columns:minmax(0,1fr)!important;border:1px solid var(--line);border-radius:6px;padding:10px;position:relative}
+  .rep-row .lbl{display:block}
+  .rep-row .x{position:absolute;top:4px;inset-inline-end:4px}
+  section.card{padding:16px}
+  .roles button small{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <div class="brand"><b id="t-brand"></b><span id="t-sub"></span></div>
+      <button type="button" class="lang" id="btn-lang" lang="ar"></button>
+    </div>
+  </div>
+  <div class="wrap"><div class="roles" role="tablist" id="roles"></div></div>
+</header>
+
+<main><div class="wrap" id="main"></div></main>
+
+<div class="submitbar" id="submitbar"><div class="wrap" id="submitbar-inner"></div></div>
+<div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+   SETTING: paste your Google Apps Script web app link here (ends with /exec).
+   See SETUP.md, step 3. - Ahmed Gaid
+   ===================================================================== */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3BaAF1paqxVHZgVXiI3N6Zj2H5SSdBh1dDBscwX-3jILWh4K9tyLwS1dRVCx2n5Wg/exec";
+
+(() => {
+"use strict";
+/* ---------- option lists: [value, English, Arabic] ---------- */
+const L = a => a.map(([en,ar]) => [en,en,ar]);
+const MODULES = [["PO","Purchasing","المشتريات"],["AP","Payables","الدائنون"],["AR","Receivables","المدينون"],["GL","General Ledger","الأستاذ العام"],["INV","Inventory","المخزون"],["OM","Order Management","إدارة الطلبات"],["FA","Fixed Assets","الأصول الثابتة"],["CE","Cash Management","إدارة النقدية"],["PA","Projects","المشاريع"],["HR","Human Resources","الموارد البشرية"],["PAY","Payroll","الرواتب"],["FND","System Administrator","مدير النظام"],["Other","Other / not sure","أخرى / غير متأكد"]].map(([c,en,ar])=>[c,c+" · "+en,c+" · "+ar]);
+const KIND = L([["New report","تقرير جديد"],["Change to an existing report","تعديل تقرير موجود"],["Fix a wrong result","إصلاح نتيجة خاطئة"]]);
+const PRIORITY = L([["Normal","عادية"],["High","عالية"],["Urgent","عاجلة"],["Low","منخفضة"]]);
+const FREQ = L([["When needed","عند الحاجة"],["Daily","يومي"],["Weekly","أسبوعي"],["Month end","نهاية الشهر"],["Scheduled and emailed","مجدول ويرسل بالبريد"]]);
+const SRC_KINDS = L([["Screen (navigation path)","شاشة (مسار الوصول)"],["Existing report","تقرير موجود"],["View","عرض View"],["Table","جدول Table"],["Excel / outside EBS","ملف Excel / خارج النظام"],["Other","أخرى"]]);
+const PARAM_TYPES = L([["List of values","قائمة اختيار"],["Text","نص"],["Date","تاريخ"],["Date range","فترة تاريخ (من - إلى)"],["Number","رقم"],["Number range","نطاق أرقام"],["Yes / No","نعم / لا"]]);
+const YESNO = L([["No","لا"],["Yes","نعم"]]);
+const FORMATS = L([["Excel","Excel"],["PDF","PDF"],["Word (RTF)","Word (RTF)"],["Text / CSV","نص / CSV"]]);
+const LANGS = L([["Arabic","العربية"],["English","الإنجليزية"],["Arabic and English","العربية والإنجليزية"]]);
+const ORIENT = L([["Landscape","عرضي"],["Portrait","طولي"],["Not important (Excel)","غير مهم (Excel)"]]);
+const ONUAT = L([["Not sure","غير متأكد"],["Yes","نعم"],["No, only on PROD","لا، فقط على بيئة الإنتاج PROD"]]);
+const DECISION = L([["Approved","معتمد"],["Approved with changes","معتمد مع تعديلات"],["Need more info","يحتاج معلومات إضافية"],["Not recommended","غير موصى به"]]);
+const TECH = L([["BI Publisher - data template (XML) + RTF","BI Publisher - data template (XML) + RTF"],["Oracle Reports (RDF) + BI Publisher RTF","Oracle Reports (RDF) + BI Publisher RTF"],["Oracle Reports (RDF) only","Oracle Reports (RDF) فقط"],["SQL*Plus / PL/SQL output","SQL*Plus / PL/SQL output"],["Other","أخرى"]]);
+const OBJ_TYPES = L([["View","View"],["Table","Table"],["Package","Package"],["Function","Function"],["Other","أخرى"]]);
+const FILE_CATS = L([["Layout drawing","رسم التصميم"],["Screen screenshot","صورة شاشة"],["Sample output","نموذج مخرجات"],["Query / data","استعلام / بيانات"],["Design document","مستند تصميم"],["Other","أخرى"]]);
+const STATUSES = L([["New","جديد"],["Consultant review","مراجعة الاستشاري"],["Need info","بحاجة لمعلومات"],["Approved for development","معتمد للتطوير"],["In development","قيد التطوير"],["In UAT","في اختبار المستخدم"],["Done","مكتمل"],["Not planned","غير مخطط"]]);
+
+/* ---------- the 3 parts: sections and fields ---------- */
+const PARTS = {
+ requester:{ label:["Requester","مقدم الطلب"], sub:["Business user","مستخدم الأعمال"], nameKey:"requester", sections:[
+  {title:["About the report","عن التقرير"],hint:["Give the report a clear name. For a change, write the report name as it shows in Submit Request.","اكتب اسماً واضحاً للتقرير. في حالة التعديل اكتب اسم التقرير كما يظهر في شاشة Submit Request."],fields:[
+   {k:"title",label:["Report title","عنوان التقرير"],req:1,full:1,ph:["Pay Item Delivery & Contract Security Expiry Alert Report","تقرير تأخر توريد بنود الدفع وانتهاء الضمانات"]},
+   {k:"kind",label:["Request type","نوع الطلب"],type:"select",opts:KIND},
+   {k:"existing",label:["Existing report name (if any)","اسم التقرير الحالي (إن وجد)"],ph:["Zaid PO Details","Zaid PO Details"]},
+   {k:"module",label:["Module","الموديول"],type:"select",opts:MODULES,blank:1,req:1},
+   {k:"ou",label:["Operating unit(s)","وحدة التشغيل"],ph:["Projects_OPU, or All my OUs","Projects_OPU أو كل وحداتي"]},
+   {k:"priority",label:["Priority","الأولوية"],type:"select",opts:PRIORITY},
+   {k:"neededBy",label:["Needed by","مطلوب قبل"],type:"date"},
+   {k:"requester",label:["Your name","اسمك"],req:1,ph:["Mahmoud Zyada","محمود زيادة"]},
+   {k:"email",label:["Your email (you get the reference)","بريدك الإلكتروني (يصلك رقم الطلب)"],type:"email",ph:["name@company.com","name@company.com"]},
+   {k:"dept",label:["Department / phone","الإدارة / الهاتف"],full:1,ph:["Procurement · ext. 1234","المشتريات · تحويلة 1234"]}]},
+  {title:["Business need","الحاجة من التقرير"],hint:["What problem does the report solve, who reads it and how often?","ما المشكلة التي يحلها التقرير، ومن سيقرؤه، وكم مرة؟"],fields:[
+   {k:"purpose",label:["What should the report show, and why?","ماذا يعرض التقرير، ولماذا؟"],type:"textarea",req:1,full:1,ph:["List PO lines past the need-by date and not fully received, so buyers can follow up with the supplier.","عرض بنود أوامر الشراء المتأخرة عن تاريخ التوريد وغير المستلمة بالكامل، لمتابعتها مع المورد."]},
+   {k:"readers",label:["Who reads it","من سيستخدم التقرير"],ph:["Buyers, procurement manager","المشترون ومدير المشتريات"]},
+   {k:"frequency",label:["How often","كم مرة"],type:"select",opts:FREQ}]},
+  {title:["Screens and data you use","الشاشات والبيانات التي تستخدمها"],hint:["Where do you see this data today? For a screen write the path (Responsibility > Menu > Screen) and the field names.","أين ترى هذه البيانات اليوم؟ للشاشة اكتب المسار (Responsibility > Menu > Screen) وأسماء الحقول."],fields:[
+   {k:"sources",type:"rep",empty:["No data source yet.","لا توجد مصادر بعد."],add:["+ Add a source","+ إضافة مصدر"],cols:[
+    {k:"kind",label:["Type","النوع"],type:"select",opts:SRC_KINDS,w:"190px"},
+    {k:"name",label:["Screen path or name","مسار الشاشة أو الاسم"],ph:["Purchasing > Purchase Orders > Shipments","Purchasing > Purchase Orders > Shipments"],w:"minmax(0,1.3fr)"},
+    {k:"note",label:["What we take from it","ماذا نأخذ منه"],ph:["Need-by date, received quantity","تاريخ التوريد، الكمية المستلمة"],w:"minmax(0,1fr)"}]}]},
+  {title:["Filters (parameters)","معايير التشغيل"],hint:["What the user fills in before the report runs.","ما يدخله المستخدم قبل تشغيل التقرير."],fields:[
+   {k:"params",type:"rep",empty:["No filter yet.","لا توجد معايير بعد."],add:["+ Add a filter","+ إضافة معيار"],cols:[
+    {k:"name",label:["Filter","المعيار"],ph:["Need-by Date From / To","تاريخ التوريد من / إلى"],w:"minmax(0,1.2fr)"},
+    {k:"type",label:["Type","النوع"],type:"select",opts:PARAM_TYPES,w:"170px"},
+    {k:"req",label:["Required","إجباري"],type:"select",opts:YESNO,w:"100px"},
+    {k:"def",label:["Default","القيمة الافتراضية"],ph:["Today","تاريخ اليوم"],w:"minmax(0,1fr)"}]}]},
+  {title:["Columns","الأعمدة"],hint:["The columns in the order you want them, and any calculation.","الأعمدة بالترتيب المطلوب، وأي عملية حسابية."],fields:[
+   {k:"columns",type:"rep",empty:["No column yet.","لا توجد أعمدة بعد."],add:["+ Add a column","+ إضافة عمود"],cols:[
+    {k:"header",label:["Column header","عنوان العمود"],ph:["Remaining Amount","المبلغ المتبقي"],w:"minmax(0,1fr)"},
+    {k:"source",label:["Where it comes from","مصدره"],ph:["PO screen > Amount","شاشة أمر الشراء > المبلغ"],w:"minmax(0,1fr)"},
+    {k:"note",label:["Rule or calculation","القاعدة أو الحساب"],ph:["Ordered minus received","المطلوب ناقص المستلم"],w:"minmax(0,1.2fr)"}]}]},
+  {title:["Layout and output","الشكل والمخرجات"],hint:["A screenshot or a drawing of the layout helps the most: add it under Files.","صورة أو رسم لشكل التقرير هو أكثر ما يساعدنا: أضفه في قسم الملفات."],fields:[
+   {k:"formats",label:["Output format","صيغة المخرجات"],type:"checks",opts:FORMATS,full:1,def:["Excel"]},
+   {k:"language",label:["Report language","لغة التقرير"],type:"select",opts:LANGS},
+   {k:"orientation",label:["Page","اتجاه الصفحة"],type:"select",opts:ORIENT},
+   {k:"grouping",label:["Grouping, sorting and totals","التجميع والترتيب والإجماليات"],type:"textarea",full:1,ph:["Group by PO. Sort by need-by date. Total per PO.","تجميع حسب أمر الشراء، ترتيب حسب تاريخ التوريد، إجمالي لكل أمر."]}]},
+  {title:["Rules and security","القواعد والصلاحيات"],hint:["Special rules, warnings, and who may see what.","القواعد الخاصة والتنبيهات، ومن يرى ماذا."],fields:[
+   {k:"rules",label:["Business rules and flags","قواعد العمل والتنبيهات"],type:"textarea",full:1,ph:["Flag lines where the need-by date is before the PO date.","تمييز البنود التي يكون تاريخ توريدها قبل تاريخ أمر الشراء."]},
+   {k:"security",label:["Who may see which data","من يرى أي بيانات"],type:"textarea",full:1,ph:["Each user sees only their operating units.","كل مستخدم يرى وحدات التشغيل الخاصة به فقط."]}]},
+  {title:["Test example","مثال للاختبار"],hint:["Give real document numbers that show your case, and the expected result. Please use examples that exist on UAT.","اكتب أرقام مستندات حقيقية توضح الحالة والنتيجة المتوقعة. يفضل أن تكون موجودة على بيئة الاختبار UAT."],fields:[
+   {k:"example",label:["Example numbers","أرقام المثال"],mono:1,ph:["PO 49150","PO 49150"]},
+   {k:"onUat",label:["Exists on UAT?","موجود على UAT؟"],type:"select",opts:ONUAT},
+   {k:"expected",label:["Expected result","النتيجة المتوقعة"],type:"textarea",full:1,ph:["3 lines past due, remaining 19,000.","3 بنود متأخرة، المتبقي 19,000."]}]}
+ ]},
+ consultant:{ label:["Business consultant","الاستشاري الوظيفي"], sub:["Functional review","المراجعة الوظيفية"], nameKey:"name", sections:[
+  {title:["Functional review","المراجعة الوظيفية"],hint:["Confirm the need in EBS terms and give your decision.","أكد المتطلب بمصطلحات النظام واكتب قرارك."],fields:[
+   {k:"name",label:["Consultant name","اسم الاستشاري"],req:1},
+   {k:"reviewDate",label:["Review date","تاريخ المراجعة"],type:"date"},
+   {k:"decision",label:["Decision","القرار"],type:"select",opts:DECISION},
+   {k:"summary",label:["Requirement in functional terms","وصف المتطلب وظيفياً"],type:"textarea",full:1}]},
+  {title:["Functional data sources and setup","مصادر البيانات والإعدادات"],hint:["Screens, fields and DFFs that hold the data, and any new setup needed.","الشاشات والحقول والحقول الإضافية DFF التي تحتوي البيانات، وأي إعداد جديد مطلوب."],fields:[
+   {k:"fsources",type:"rep",empty:["Nothing yet.","لا يوجد بعد."],add:["+ Add a source","+ إضافة مصدر"],cols:[
+    {k:"screen",label:["Screen / navigation","الشاشة / المسار"],w:"minmax(0,1.2fr)"},
+    {k:"field",label:["Field or DFF","الحقل أو DFF"],w:"minmax(0,1fr)"},
+    {k:"note",label:["Setup notes","ملاحظات الإعداد"],w:"minmax(0,1fr)"}]},
+   {k:"setup",label:["New setup needed (DFF, lookups, value sets)","إعدادات جديدة مطلوبة (DFF، Lookups، Value Sets)"],type:"textarea",full:1}]},
+  {title:["Final parameters","المعايير النهائية"],hint:["The final list of parameters and where each list of values comes from.","القائمة النهائية للمعايير ومصدر قيم كل قائمة."],fields:[
+   {k:"cparams",type:"rep",empty:["Nothing yet.","لا يوجد بعد."],add:["+ Add a parameter","+ إضافة معيار"],cols:[
+    {k:"name",label:["Parameter","المعيار"],w:"minmax(0,1fr)"},
+    {k:"values",label:["List values / source","قيم القائمة / مصدرها"],w:"minmax(0,1.2fr)"},
+    {k:"def",label:["Default","الافتراضي"],w:"minmax(0,.8fr)"},
+    {k:"req",label:["Required","إجباري"],type:"select",opts:YESNO,w:"100px"}]}]},
+  {title:["Business rules and calculations","قواعد العمل والحسابات"],hint:["Final rules the developer must follow.","القواعد النهائية التي يلتزم بها المطور."],fields:[
+   {k:"rules",label:["Rules and statuses","القواعد والحالات"],type:"textarea",full:1},
+   {k:"calcs",label:["Calculations","الحسابات"],type:"textarea",full:1}]},
+  {title:["Access","الصلاحيات والوصول"],hint:["Who runs the report and which data each user may see.","من يشغل التقرير وما البيانات المسموح لكل مستخدم."],fields:[
+   {k:"resps",label:["Responsibilities","المسؤوليات Responsibilities"],type:"textarea"},
+   {k:"reqGroup",label:["Request group","مجموعة الطلبات Request Group"]},
+   {k:"ouSecurity",label:["Operating unit security","صلاحيات وحدات التشغيل"],type:"textarea",full:1}]},
+  {title:["UAT test scenarios","سيناريوهات اختبار المستخدم"],hint:["Cases to test on UAT, with data that exists there.","حالات الاختبار على UAT ببيانات موجودة هناك."],fields:[
+   {k:"tests",type:"rep",empty:["No scenario yet.","لا توجد سيناريوهات بعد."],add:["+ Add a scenario","+ إضافة سيناريو"],cols:[
+    {k:"scenario",label:["Scenario","السيناريو"],w:"minmax(0,1.2fr)"},
+    {k:"data",label:["Test data on UAT","بيانات الاختبار على UAT"],w:"minmax(0,1fr)"},
+    {k:"expected",label:["Expected result","النتيجة المتوقعة"],w:"minmax(0,1fr)"}]}]},
+  {title:["Sign-off and questions","الاعتماد والأسئلة"],hint:["Open points, who tests and who approves. The message is emailed to the requester.","النقاط المفتوحة ومن يختبر ومن يعتمد. الرسالة ترسل لمقدم الطلب بالبريد."],fields:[
+   {k:"tester",label:["UAT tester","مختبر UAT"]},
+   {k:"signoff",label:["Approved by (business)","المعتمد من (الأعمال)"]},
+   {k:"questions",label:["Open questions","أسئلة مفتوحة"],type:"textarea",full:1},
+   {k:"toRequester",label:["Message to the requester (emailed)","رسالة لمقدم الطلب (ترسل بالبريد)"],type:"textarea",full:1}]}
+ ]},
+ developer:{ label:["Developer","المطور"], sub:["Technical design","التصميم الفني"], nameKey:"name", sections:[
+  {title:["Technical design","التصميم الفني"],hint:["Technology and EBS object names.","التقنية وأسماء الكائنات في النظام."],fields:[
+   {k:"name",label:["Developer name","اسم المطور"],req:1},
+   {k:"tech",label:["Technology","التقنية"],type:"select",opts:TECH},
+   {k:"app",label:["Application","التطبيق Application"],type:"select",opts:MODULES,blank:1},
+   {k:"progName",label:["Program name (users see)","اسم البرنامج كما يراه المستخدم"]},
+   {k:"shortName",label:["Concurrent short name","الاسم المختصر للبرنامج"],mono:1},
+   {k:"executable",label:["Executable","الملف التنفيذي Executable"],mono:1},
+   {k:"template",label:["Data definition / template code","كود تعريف البيانات / القالب"],mono:1}]},
+  {title:["Data model","نموذج البيانات"],hint:["Tables, views and packages used, and query notes.","الجداول والـ Views والحزم المستخدمة وملاحظات الاستعلام."],fields:[
+   {k:"objects",type:"rep",empty:["Nothing yet.","لا يوجد بعد."],add:["+ Add an object","+ إضافة كائن"],cols:[
+    {k:"obj",label:["Object (owner.name)","الكائن (owner.name)"],mono:1,w:"minmax(0,1.2fr)"},
+    {k:"type",label:["Type","النوع"],type:"select",opts:OBJ_TYPES,w:"130px"},
+    {k:"use",label:["Used for / join","الاستخدام / الربط"],w:"minmax(0,1fr)"}]},
+   {k:"queryNotes",label:["Query notes: joins, filters, performance","ملاحظات الاستعلام: الربط والفلاتر والأداء"],type:"textarea",full:1}]},
+  {title:["Parameters and value sets","المعايير ومجموعات القيم"],hint:["How each parameter is built in EBS.","طريقة بناء كل معيار في النظام."],fields:[
+   {k:"dparams",type:"rep",empty:["Nothing yet.","لا يوجد بعد."],add:["+ Add a parameter","+ إضافة معيار"],cols:[
+    {k:"param",label:["Parameter","المعيار"],w:"minmax(0,1fr)"},
+    {k:"token",label:["Token","Token"],mono:1,w:"minmax(0,.9fr)"},
+    {k:"vset",label:["Value set","مجموعة القيم"],mono:1,w:"minmax(0,1fr)"},
+    {k:"def",label:["Default","الافتراضي"],w:"minmax(0,.8fr)"}]}]},
+  {title:["Plan","الخطة"],hint:["Estimate and target dates.","التقدير والتواريخ المستهدفة."],fields:[
+   {k:"estimate",label:["Estimate (hours)","التقدير (ساعات)"],mono:1},
+   {k:"task",label:["Task number","رقم المهمة"],mono:1,ph:["T-0014","T-0014"]},
+   {k:"devDate",label:["Ready on DEV","جاهز على DEV"],type:"date"},
+   {k:"uatDate",label:["Ready for UAT","جاهز لاختبار UAT"],type:"date"},
+   {k:"prodDate",label:["Planned PROD date","تاريخ النشر على PROD"],type:"date"}]},
+  {title:["Notes","ملاحظات"],hint:["Risks and questions. The message is emailed to the requester.","المخاطر والأسئلة. الرسالة ترسل لمقدم الطلب بالبريد."],fields:[
+   {k:"risks",label:["Risks and open technical questions","المخاطر والأسئلة الفنية المفتوحة"],type:"textarea",full:1},
+   {k:"toRequester",label:["Message to the requester (emailed)","رسالة لمقدم الطلب (ترسل بالبريد)"],type:"textarea",full:1}]}
+ ]}
+};
+const ROLES = ["requester","consultant","developer"];
+const REQUESTER_EDITABLE = ["New","Need info"];
+
+/* ---------- interface words ---------- */
+const UI = {
+ brand:["EBS Report Request","طلب تقرير EBS"],
+ sub:["Oracle EBS R12 · one request, three parts: requester, consultant, developer","Oracle EBS R12 · طلب واحد بثلاثة أجزاء: مقدم الطلب، الاستشاري، المطور"],
+ lang:["العربية","English"],
+ openTitle:["Open a request","فتح طلب"], newTitle:["New request","طلب جديد"],
+ openHintReq:["Send a new request below, or open one you sent to see its status and replies.","أرسل طلباً جديداً بالأسفل، أو افتح طلباً سابقاً لمعرفة حالته والردود."],
+ openHintTeam:["Enter the request reference and your access code.","أدخل رقم الطلب ورمز الدخول الخاص بك."],
+ ref:["Request reference","رقم الطلب"], code:["Access code","رمز الدخول"], open:["Open","فتح"], startNew:["Start a new request","بدء طلب جديد"],
+ choose:["Choose…","اختر…"], none:["Not given","غير محدد"],
+ files:["Files and images","الملفات والصور"],
+ filesHint:["Layout drawings, screenshots, sample output (Excel, PDF), queries or design documents. Up to 10 MB per file, 25 MB per save.","رسومات التصميم، صور الشاشات، نماذج المخرجات (Excel، PDF)، الاستعلامات أو مستندات التصميم. حتى 10 ميجا للملف و25 ميجا في كل حفظ."],
+ drop:["Drop files here, or paste a screenshot (Ctrl+V)","اسحب الملفات هنا، أو الصق صورة الشاشة (Ctrl+V)"],
+ pick:["Choose files","اختيار ملفات"], remove:["Remove","حذف"], note:["Note (optional)","ملاحظة (اختياري)"],
+ savedFiles:["Files already on this request","الملفات المرفقة بهذا الطلب"], newFiles:["New files to add","ملفات جديدة للإضافة"],
+ send:["Send request","إرسال الطلب"], save:["Save my part","حفظ الجزء الخاص بي"], example:["Fill with an example","تعبئة بمثال"], clear:["Clear form","مسح النموذج"], clearAgain:["Click again to clear","اضغط مرة أخرى للمسح"],
+ draftNote:["Your typing is kept in this browser until you send it. Files are not kept if you close the page.","ما تكتبه يحفظ في هذا المتصفح حتى الإرسال. الملفات لا تحفظ إذا أغلقت الصفحة."],
+ status:["Status","الحالة"], sending:["Sending… please keep this page open.","جاري الإرسال… لا تغلق الصفحة."],
+ yourPart:["Your part","الجزء الخاص بك"], readOnly:["Read only","للقراءة فقط"], editable:["You can edit","يمكنك التعديل"],
+ locked:["This part is locked because the team is working on it. Ask the team if something must change.","هذا الجزء مقفل لأن الفريق يعمل عليه. تواصل مع الفريق إذا احتجت تعديلاً."],
+ messages:["Messages from the team","رسائل الفريق"], history:["History","السجل"],
+ doneTitle:["Your request was sent","تم إرسال طلبك"], doneQuote:["Please quote this reference in any email about the request.","يرجى ذكر هذا الرقم في أي مراسلة تخص الطلب."],
+ confirmSent:["A confirmation was sent to","تم إرسال تأكيد إلى"], filesReceived:["file(s) received.","ملف/ملفات تم استلامها."],
+ copy:["Copy the request as text","نسخ الطلب كنص"], another:["Send another request","إرسال طلب آخر"], openIt:["Open this request","فتح هذا الطلب"],
+ notConnected:["<b>Not connected yet.</b> The form works, but it can't send until the EBS team adds the script link (SETUP.md, step 3).","<b>غير متصل بعد.</b> النموذج يعمل، لكن لا يمكن الإرسال حتى يضيف فريق EBS رابط السكربت (SETUP.md الخطوة 3)."],
+ needOpen:["Open a request first: enter its reference and your access code above.","افتح طلباً أولاً: أدخل رقم الطلب ورمز الدخول بالأعلى."],
+ exampleLoaded:["<b>Example loaded.</b> Replace it with your own request before you send it.","<b>تم تحميل مثال.</b> استبدله بطلبك قبل الإرسال."],
+ wrongRoleCode:["This code is for another role. Choose the matching tab.","هذا الرمز لدور آخر. اختر التبويب المناسب."],
+ err:{bad_code:["The access code is wrong.","رمز الدخول غير صحيح."],missing:["Some required fields are empty.","بعض الحقول الإجبارية فارغة."],too_large:["The files are too big. Remove some, or send them by email.","الملفات كبيرة جداً. احذف بعضها أو أرسلها بالبريد."],not_setup:["The request store is not set up yet. Tell the EBS team.","مخزن الطلبات غير مجهز بعد. أبلغ فريق EBS."],not_found:["No request with this reference.","لا يوجد طلب بهذا الرقم."],locked:["This request is locked for changes now.","هذا الطلب مقفل للتعديل الآن."],wrong_role:["This code is for another role. Choose the matching tab.","هذا الرمز لدور آخر. اختر التبويب المناسب."],net:["Sending failed. Check your connection and try again.","فشل الإرسال. تأكد من الاتصال وحاول مرة أخرى."],server:["Something went wrong on the server. Try again, or tell the EBS team.","حدث خطأ في الخادم. حاول مرة أخرى أو أبلغ فريق EBS."]},
+ fill:["Please fill in:","يرجى تعبئة:"], sent:["Sent.","تم الإرسال."], saved:["Saved. The team was emailed.","تم الحفظ وإبلاغ الفريق بالبريد."], opened:["Request opened.","تم فتح الطلب."],
+ copied:["Copied.","تم النسخ."], pasted:["Pasted image added.","تمت إضافة الصورة."], cleared:["Form cleared.","تم مسح النموذج."],
+ tooBigFile:["is over 10 MB. Send it by email.","أكبر من 10 ميجا. أرسله بالبريد."], blocked:["program files are not accepted.","ملفات البرامج غير مقبولة."],
+ by:["by","بواسطة"]
+};
+
+/* ---------- state ---------- */
+const $ = s => document.querySelector(s);
+const DRAFT_KEY="ebs-report-request.v2.draft", PREF_KEY="ebs-report-request.v2.prefs";
+let lang="en", role="requester", current=null, sentRef=null, sentText="";
+let forms={requester:blank("requester"),consultant:blank("consultant"),developer:blank("developer")};
+let pending={requester:[],consultant:[],developer:[]};
+let codes={requester:"",consultant:"",developer:""};
+let refInput="", statusSel="";
+const t = p => (Array.isArray(p) ? (lang==="ar" ? p[1] : p[0]) : (p ?? ""));
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const optLabel = (opts,v) => { const o=(opts||[]).find(x=>x[0]===v); return o ? (lang==="ar"?o[2]:o[1]) : v; };
+const fmtSize = b => b<1024?b+" B":b<1048576?(b/1024).toFixed(0)+" KB":(b/1048576).toFixed(1)+" MB";
+const stClass = s => "st-"+String(s||"New").replace(/\s+/g,"-");
+function toast(m){ const el=$("#toast"); el.textContent=m; el.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>el.hidden=true,4500); }
+function fields(r){ return PARTS[r].sections.flatMap(s=>s.fields); }
+function blankRow(f){ const o={}; f.cols.forEach(c=>o[c.k]=c.type==="select"?c.opts[0][0]:""); return o; }
+function blank(r){ const o={}; fields(r).forEach(f=>{ o[f.k]= f.type==="rep"?[blankRow(f)] : f.type==="checks"?[...(f.def||[])] : f.type==="select"?(f.blank?"":f.opts[0][0]) : ""; }); return o; }
+function fmtDate(s){ if(!s) return ""; const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleDateString(lang==="ar"?"ar-EG":"en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
+function fmtTime(s){ if(!s) return ""; return String(s).replace("T"," ").slice(0,16); }
+
+/* ---------- preferences and draft ---------- */
+function savePrefs(){ try{ localStorage.setItem(PREF_KEY,JSON.stringify({lang,role,codes})); }catch(e){} }
+function loadPrefs(){ try{ const p=JSON.parse(localStorage.getItem(PREF_KEY)||"null"); if(p){ lang=p.lang==="ar"?"ar":"en"; role=ROLES.includes(p.role)?p.role:"requester"; codes={...codes,...(p.codes||{})}; } }catch(e){} }
+function saveDraft(){ if(current) return; clearTimeout(saveDraft._t); saveDraft._t=setTimeout(()=>{ try{ localStorage.setItem(DRAFT_KEY,JSON.stringify(forms.requester)); }catch(e){} },400); }
+function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null"); if(d) forms.requester={...blank("requester"),...d}; }catch(e){} }
+function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+
+/* ---------- rendering: fields ---------- */
+function fieldHTML(r,f,data,edit){
+  const v=data[f.k], id=`${r}-${f.k}`, cls="f"+(f.full?" full":"");
+  if(f.type==="rep") return repHTML(r,f,v||[],edit);
+  if(!edit){
+    let shown = f.type==="select"?optLabel(f.opts,v) : f.type==="checks"?(v||[]).map(x=>optLabel(f.opts,x)).join(", ") : f.type==="date"?fmtDate(v) : v;
+    return `<div class="${cls}"><span>${esc(t(f.label))}</span><div class="v${f.mono?" mono":""}" dir="auto">${shown?esc(shown):`<span class="none">${esc(t(UI.none))}</span>`}</div></div>`;
+  }
+  const lab=`<span>${esc(t(f.label))}${f.req?" <em>*</em>":""}</span>`, ph=f.ph?` placeholder="${esc(t(f.ph))}"`:"";
+  const common=`id="${id}" data-part="${r}" data-k="${f.k}"`;
+  if(f.type==="textarea") return `<label class="${cls}">${lab}<textarea ${common} dir="auto"${ph}>${esc(v)}</textarea></label>`;
+  if(f.type==="select") return `<label class="${cls}">${lab}<select ${common}>${f.blank?`<option value="">${esc(t(UI.choose))}</option>`:""}${f.opts.map(o=>`<option value="${esc(o[0])}"${o[0]===v?" selected":""}>${esc(lang==="ar"?o[2]:o[1])}</option>`).join("")}</select></label>`;
+  if(f.type==="checks") return `<div class="${cls}">${lab}<div class="checks">${f.opts.map((o,i)=>`<label><input type="checkbox" id="${id}-${i}" data-part="${r}" data-check="${f.k}" value="${esc(o[0])}"${(v||[]).includes(o[0])?" checked":""}> ${esc(lang==="ar"?o[2]:o[1])}</label>`).join("")}</div></div>`;
+  const type=f.type==="date"?"date":f.type==="email"?"email":"text";
+  return `<label class="${cls}">${lab}<input type="${type}" ${common} value="${esc(v)}"${ph}${f.mono||type==="email"?' class="mono" dir="ltr"':' dir="auto"'}></label>`;
+}
+function repHTML(r,f,rows,edit){
+  if(!edit){
+    const filled=rows.filter(x=>f.cols.some(c=>c.type!=="select"&&String(x[c.k]||"").trim()));
+    if(!filled.length) return `<div class="f full"><span class="none" style="color:var(--muted)">${esc(t(UI.none))}</span></div>`;
+    return `<div class="full tbl"><table><thead><tr>${f.cols.map(c=>`<th>${esc(t(c.label))}</th>`).join("")}</tr></thead><tbody>${filled.map(x=>`<tr>${f.cols.map(c=>`<td class="${c.mono?"mono":""}" dir="auto">${esc(c.type==="select"?optLabel(c.opts,x[c.k]):x[c.k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+  const tmpl=f.cols.map(c=>c.w||"minmax(0,1fr)").join(" ")+" 30px";
+  let h=`<div class="full rep"><div class="rep-head" style="grid-template-columns:${tmpl}">${f.cols.map(c=>`<span>${esc(t(c.label))}</span>`).join("")}<span></span></div>`;
+  if(!rows.length) h+=`<div class="rep-empty">${esc(t(f.empty))}</div>`;
+  rows.forEach((row,i)=>{
+    h+=`<div class="rep-row" style="grid-template-columns:${tmpl}">`+f.cols.map(c=>{
+      const id=`${r}-${f.k}-${i}-${c.k}`, v=row[c.k]??"", a=`id="${id}" data-part="${r}" data-rep="${f.k}" data-i="${i}" data-k="${c.k}" aria-label="${esc(t(c.label))}"`;
+      const ctl=c.type==="select"?`<select ${a}>${c.opts.map(o=>`<option value="${esc(o[0])}"${o[0]===v?" selected":""}>${esc(lang==="ar"?o[2]:o[1])}</option>`).join("")}</select>`
+        :`<input type="text" ${a}${c.mono?' class="mono" dir="ltr"':' dir="auto"'} placeholder="${esc(t(c.ph||""))}" value="${esc(v)}">`;
+      return `<div class="cell"><span class="lbl">${esc(t(c.label))}</span>${ctl}</div>`;
+    }).join("")+`<button type="button" class="x" data-part="${r}" data-del="${f.k}" data-i="${i}" aria-label="${esc(t(UI.remove))}">×</button></div>`;
+  });
+  return h+`<div><button type="button" class="btn ghost" data-part="${r}" data-add="${f.k}">${esc(t(f.add))}</button></div></div>`;
+}
+function partHTML(r,data,edit){
+  return PARTS[r].sections.map((s,i)=>`<section class="card p-${r}"><h3><i>${i+1}</i>${esc(t(s.title))}</h3>${edit?`<p class="hint">${esc(t(s.hint))}</p>`:""}<div class="grid">${s.fields.map(f=>fieldHTML(r,f,data,edit)).join("")}</div></section>`).join("");
+}
+function partReadHTML(r,data){
+  return PARTS[r].sections.map(s=>`<div><h4>${esc(t(s.title))}</h4><div class="grid">${s.fields.map(f=>fieldHTML(r,f,data,false)).join("")}</div></div>`).join("");
+}
+function filesHTML(){
+  const list=pending[role]; const tot=list.reduce((s,f)=>s+f.file.size,0);
+  const saved=(current&&current.files)||[];
+  return `<section class="card p-${role}"><h3>${esc(t(UI.files))}</h3><p class="hint">${esc(t(UI.filesHint))}</p>
+    ${saved.length?`<div class="f" style="margin-bottom:14px"><span>${esc(t(UI.savedFiles))}</span><div class="files">${saved.map(f=>`<a class="file" href="${esc(f.url||"#")}" target="_blank" rel="noopener"><div class="thumb"><span>${esc((String(f.name).split(".").pop()||"file").toUpperCase())}</span></div><div class="meta"><div class="name" dir="auto">${esc(f.name)}</div><div class="sub">${esc(t(PARTS[f.role]?.label||f.role))} · ${esc(optLabel(FILE_CATS,f.category))}</div>${f.note?`<div class="sub" dir="auto">${esc(f.note)}</div>`:""}</div></a>`).join("")}</div></div>`:""}
+    <div class="drop" id="drop"><b>${esc(t(UI.drop))}</b><small>Images, PDF, Excel, Word, CSV, TXT, SQL</small><div><button type="button" class="btn" id="pick">${esc(t(UI.pick))}</button></div><input type="file" id="file-input" multiple hidden></div>
+    ${list.length?`<div class="f" style="margin-top:14px"><span>${esc(t(UI.newFiles))}</span><div class="files">${list.map((f,i)=>`<div class="file"><div class="thumb">${f.preview?`<img alt="${esc(f.name)}" src="${f.preview}">`:`<span>${esc((f.name.split(".").pop()||"file").toUpperCase())}</span>`}</div><div class="meta"><div class="name" dir="auto">${esc(f.name)}</div><div class="sub">${fmtSize(f.file.size)}</div>
+      <select id="fcat-${i}" data-fcat="${i}" aria-label="${esc(t(UI.files))}">${FILE_CATS.map(o=>`<option value="${esc(o[0])}"${o[0]===f.category?" selected":""}>${esc(lang==="ar"?o[2]:o[1])}</option>`).join("")}</select>
+      <input type="text" id="fnote-${i}" data-fnote="${i}" dir="auto" placeholder="${esc(t(UI.note))}" value="${esc(f.note)}">
+      <div><button type="button" class="btn ghost" data-rmfile="${i}">${esc(t(UI.remove))}</button></div></div></div>`).join("")}</div><div class="total${tot>25*1048576?" over":""}" style="margin-top:8px">${list.length} · ${fmtSize(tot)} / 25 MB</div></div>`:""}
+  </section>`;
+}
+
+/* ---------- rendering: page ---------- */
+function render(){
+  document.documentElement.lang=lang; document.documentElement.dir=lang==="ar"?"rtl":"ltr";
+  document.title=t(UI.brand);
+  $("#t-brand").textContent=t(UI.brand); $("#t-sub").textContent=t(UI.sub);
+  $("#btn-lang").textContent=t(UI.lang); $("#btn-lang").lang=lang==="ar"?"en":"ar";
+  $("#roles").innerHTML=ROLES.map(r=>`<button type="button" role="tab" data-role="${r}" aria-selected="${r===role}">${esc(t(PARTS[r].label))}<small>${esc(t(PARTS[r].sub))}</small></button>`).join("");
+  const m=$("#main"); let h="";
+  if(!SCRIPT_URL) h+=`<div class="notice">${t(UI.notConnected)}</div>`;
+  if(sentRef){ h+=doneHTML(); m.innerHTML=h; $("#submitbar").hidden=true; return; }
+  h+=`<div class="panel"><h2>${esc(t(current?UI.openTitle:(role==="requester"?UI.newTitle:UI.openTitle)))}</h2><p class="hint" style="margin:0;color:var(--muted);font-size:13.5px">${esc(t(role==="requester"?UI.openHintReq:UI.openHintTeam))}</p>
+    <div class="openrow"><label class="f"><span>${esc(t(UI.ref))}</span><input type="text" id="open-ref" class="mono" dir="ltr" value="${esc(refInput)}" placeholder="REQ-20261112-AB12"></label>
+    <label class="f"><span>${esc(t(UI.code))}${role==="requester"&&!current?" <em>*</em>":""}</span><input type="text" id="open-code" class="mono" dir="ltr" autocomplete="off" value="${esc(codes[role])}" placeholder="${role==="requester"?"EBS-1234":role==="consultant"?"BC-1234":"DEV-1234"}"></label>
+    <button type="button" class="btn" id="btn-open">${esc(t(UI.open))}</button>${current&&role==="requester"?`<button type="button" class="btn ghost" id="btn-new">${esc(t(UI.startNew))}</button>`:""}</div>
+    <div class="hp" aria-hidden="true"><label>Website <input type="text" id="f-website" tabindex="-1" autocomplete="off"></label></div></div>`;
+  if(current) h+=requestHTML();
+  else if(role==="requester"){
+    if(forms.requester._example) h+=`<div class="example-banner">${t(UI.exampleLoaded)}</div>`;
+    h+=`<div class="parthead"><h2>${esc(t(PARTS.requester.label))}</h2><span class="badge edit">${esc(t(UI.editable))}</span></div>`+partHTML("requester",forms.requester,true)+filesHTML();
+  } else h+=`<div class="panel"><p style="margin:0;color:var(--muted)">${esc(t(UI.needOpen))}</p></div>`;
+  m.innerHTML=h;
+  renderBar(); bindDrop();
+}
+function canEditMine(){ if(!current) return role==="requester"; if(role==="requester") return REQUESTER_EDITABLE.includes(current.status); return true; }
+function requestHTML(){
+  const c=current, title=(c.parts.requester||{}).title||"", mine=canEditMine();
+  const msgs=["consultant","developer"].map(r=>({r,m:(c.parts[r]||{}).toRequester,n:(c.parts[r]||{}).name})).filter(x=>x.m);
+  let h=`<div class="reqhead"><h1 dir="auto">${esc(title)}</h1><span class="pill ${stClass(c.status)}">${esc(optLabel(STATUSES,c.status))}</span></div>
+    <div class="ref" style="font-family:var(--f-mono);font-size:13px;color:var(--muted)" dir="ltr">${esc(c.ref)} · ${esc(fmtTime(c.created))}</div>`;
+  if(msgs.length) h+=`<div class="msgs"><b style="font-size:13.5px">${esc(t(UI.messages))}</b>${msgs.map(x=>`<div class="msg" dir="auto"><b>${esc(x.n||"")} · ${esc(t(PARTS[x.r].label))}</b>${esc(x.m)}</div>`).join("")}</div>`;
+  ROLES.filter(r=>r!==role).forEach(r=>{ const d=c.parts[r]; if(!d) return;
+    h+=`<details class="ro p-${r}"${r==="requester"&&role!=="requester"?" open":""}><summary>${esc(t(PARTS[r].label))}<span class="badge">${esc(t(UI.readOnly))}</span>${d[PARTS[r].nameKey]?`<span style="font-weight:400;color:var(--muted)" dir="auto">${esc(d[PARTS[r].nameKey])}</span>`:""}</summary><div class="body">${partReadHTML(r,d)}</div></details>`; });
+  h+=`<div class="parthead"><h2>${esc(t(UI.yourPart))}: ${esc(t(PARTS[role].label))}</h2><span class="badge${mine?" edit":""}">${esc(t(mine?UI.editable:UI.readOnly))}</span></div>`;
+  if(!mine) h+=`<div class="notice">${esc(t(UI.locked))}</div>`;
+  h+=partHTML(role,forms[role],mine);
+  if(mine) h+=filesHTML();
+  if((c.history||[]).length) h+=`<details class="ro" style="--pc:var(--muted)"><summary>${esc(t(UI.history))}</summary><div class="body"><ul class="hist">${c.history.slice().reverse().map(x=>`<li><time dir="ltr">${esc(fmtTime(x.at))}</time><span class="pill ${stClass(x.status)}">${esc(optLabel(STATUSES,x.status))}</span><span dir="auto">${esc(x.note)} · ${esc(x.name)}</span></li>`).join("")}</ul></div></details>`;
+  return h;
+}
+function renderBar(){
+  const bar=$("#submitbar"), inner=$("#submitbar-inner");
+  if(!current&&role!=="requester"){ bar.hidden=true; return; }
+  if(current&&!canEditMine()){ bar.hidden=true; return; }
+  bar.hidden=false;
+  if(!current){
+    inner.innerHTML=`<div class="msgtext" id="bar-msg">${esc(t(UI.draftNote))}</div><button type="button" class="btn ghost" id="btn-example">${esc(t(UI.example))}</button><button type="button" class="btn" id="btn-clear">${esc(t(UI.clear))}</button><button type="button" class="btn primary" id="btn-send">${esc(t(UI.send))}</button>`;
+  } else {
+    const st=statusSel||current.status;
+    inner.innerHTML=`<div class="msgtext" id="bar-msg" dir="ltr">${esc(current.ref)}</div>${role!=="requester"?`<label class="f" style="flex-direction:row;align-items:center;gap:8px"><span>${esc(t(UI.status))}</span><select id="status-sel">${STATUSES.map(o=>`<option value="${esc(o[0])}"${o[0]===st?" selected":""}>${esc(lang==="ar"?o[2]:o[1])}</option>`).join("")}</select></label>`:""}<button type="button" class="btn primary" id="btn-save">${esc(t(UI.save))}</button>`;
+  }
+}
+function doneHTML(){
+  return `<div class="done"><h1>${esc(t(UI.doneTitle))}</h1><div class="bigref">${esc(sentRef.ref)}</div><p>${sentRef.email?esc(t(UI.confirmSent))+" "+esc(sentRef.email)+". ":""}${esc(t(UI.doneQuote))} ${sentRef.files} ${esc(t(UI.filesReceived))}</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn" id="btn-copy">${esc(t(UI.copy))}</button><button type="button" class="btn" id="btn-openit">${esc(t(UI.openIt))}</button><button type="button" class="btn primary" id="btn-again">${esc(t(UI.another))}</button></div></div>`;
+}
+
+/* ---------- events ---------- */
+document.addEventListener("input",e=>{ const el=e.target, r=el.dataset.part;
+  if(el.id==="open-ref"){ refInput=el.value; return; }
+  if(el.id==="open-code"){ codes[role]=el.value; savePrefs(); return; }
+  if(el.dataset.fnote){ pending[role][+el.dataset.fnote].note=el.value; return; }
+  if(!r) return;
+  if(el.dataset.rep) forms[r][el.dataset.rep][+el.dataset.i][el.dataset.k]=el.value;
+  else if(el.dataset.k){ forms[r][el.dataset.k]=el.value; delete forms[r]._example; }
+  if(r==="requester") saveDraft();
+});
+document.addEventListener("change",e=>{ const el=e.target, r=el.dataset.part;
+  if(el.id==="status-sel"){ statusSel=el.value; return; }
+  if(el.dataset.fcat){ pending[role][+el.dataset.fcat].category=el.value; return; }
+  if(el.id==="file-input"){ addFiles(el.files); el.value=""; return; }
+  if(!r) return;
+  if(el.dataset.check){ forms[r][el.dataset.check]=[...document.querySelectorAll(`[data-part="${r}"][data-check="${el.dataset.check}"]:checked`)].map(c=>c.value); }
+  else if(el.dataset.rep) forms[r][el.dataset.rep][+el.dataset.i][el.dataset.k]=el.value;
+  else if(el.dataset.k) forms[r][el.dataset.k]=el.value;
+  if(r==="requester") saveDraft();
+});
+document.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; const r=b.dataset.part;
+  if(b.id==="btn-lang"){ lang=lang==="ar"?"en":"ar"; savePrefs(); render(); return; }
+  if(b.dataset.role){ role=b.dataset.role; statusSel=""; if(current) forms[role]=JSON.parse(JSON.stringify(current.parts[role]||blank(role))); savePrefs(); render(); return; }
+  if(b.dataset.add){ const f=fields(r).find(x=>x.k===b.dataset.add); forms[r][f.k].push(blankRow(f)); render(); return; }
+  if(b.dataset.del){ forms[r][b.dataset.del].splice(+b.dataset.i,1); render(); if(r==="requester") saveDraft(); return; }
+  if(b.dataset.rmfile){ const f=pending[role].splice(+b.dataset.rmfile,1)[0]; if(f&&f.preview) URL.revokeObjectURL(f.preview); render(); return; }
+  switch(b.id){
+    case "pick": $("#file-input").click(); break;
+    case "btn-open": openRequest(); break;
+    case "btn-new": current=null; refInput=""; forms.requester=blank("requester"); loadDraft(); render(); break;
+    case "btn-send": sendNew(); break;
+    case "btn-save": savePart(); break;
+    case "btn-example": loadExample(); break;
+    case "btn-clear": if(b.dataset.armed){ forms.requester=blank("requester"); pending.requester=[]; clearDraft(); render(); toast(t(UI.cleared)); } else { b.dataset.armed="1"; b.textContent=t(UI.clearAgain); setTimeout(()=>{ delete b.dataset.armed; b.textContent=t(UI.clear); },3000); } break;
+    case "btn-copy": copyText(sentText); break;
+    case "btn-again": sentRef=null; render(); window.scrollTo({top:0}); break;
+    case "btn-openit": refInput=sentRef.ref; sentRef=null; openRequest(); break;
+  }
+});
+document.addEventListener("paste",e=>{ if(!$("#drop")) return; const fs=[...(e.clipboardData?.files||[])]; if(!fs.length) return; e.preventDefault(); addFiles(fs); toast(t(UI.pasted)); });
+function bindDrop(){ const d=$("#drop"); if(!d) return;
+  d.addEventListener("dragover",e=>{ e.preventDefault(); d.classList.add("over"); });
+  d.addEventListener("dragleave",()=>d.classList.remove("over"));
+  d.addEventListener("drop",e=>{ e.preventDefault(); d.classList.remove("over"); addFiles(e.dataTransfer.files); }); }
+
+/* ---------- files ---------- */
+function catOf(f){ if(f.type.startsWith("image/")) return "Screen screenshot"; if(/\.(sql|csv|json|txt)$/i.test(f.name)) return "Query / data"; if(/\.(docx?)$/i.test(f.name)&&role!=="requester") return "Design document"; if(/\.(pdf|xlsx?|docx?)$/i.test(f.name)) return "Sample output"; return "Other"; }
+function addFiles(list){
+  for(const raw of [...list]){
+    let name=raw.name||"file";
+    if(/^image\.(png|jpe?g|gif|webp)$/i.test(name)) name="screenshot-"+new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")+"."+name.split(".").pop();
+    if(/\.(exe|bat|cmd|com|msi|scr|ps1|vbs|js|jar|dll)$/i.test(name)){ toast(name+": "+t(UI.blocked)); continue; }
+    if(raw.size>10*1048576){ toast(name+" "+t(UI.tooBigFile)); continue; }
+    if(!raw.size) continue;
+    pending[role].push({file:raw,name,category:catOf(raw),note:"",preview:raw.type.startsWith("image/")?URL.createObjectURL(raw):""});
+  }
+  render();
+}
+const toB64 = file => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]||""); r.onerror=()=>rej(r.error); r.readAsDataURL(file); });
+async function filesPayload(){ const out=[]; for(const f of pending[role]) out.push({name:f.name,type:f.file.type||"application/octet-stream",category:f.category,note:f.note,data:await toB64(f.file)}); return out; }
+
+/* ---------- payload helpers (English labels for the sheet and emails) ---------- */
+const en = p => Array.isArray(p)?p[0]:p;
+function optEn(opts,v){ const o=(opts||[]).find(x=>x[0]===v); return o?o[1]:v; }
+function cleanPart(r,data){ const o=JSON.parse(JSON.stringify(data)); delete o._example;
+  fields(r).forEach(f=>{ if(f.type==="rep") o[f.k]=(o[f.k]||[]).filter(x=>f.cols.some(c=>c.type!=="select"&&String(x[c.k]||"").trim())); else if(typeof o[f.k]==="string") o[f.k]=o[f.k].trim(); }); return o; }
+function valText(f,v){ if(f.type==="rep") return (v||[]).map((x,i)=>(i+1)+". "+f.cols.map(c=>c.type==="select"?optEn(c.opts,x[c.k]):x[c.k]).filter(Boolean).join(" | ")).join("\n");
+  if(f.type==="checks") return (v||[]).map(x=>optEn(f.opts,x)).join(", "); if(f.type==="select") return v?optEn(f.opts,v):""; return v||""; }
+function flatPart(r,data){ const o={}; PARTS[r].sections.forEach(s=>s.fields.forEach(f=>{ o[f.type==="rep"?en(s.title):en(f.label)]=valText(f,data[f.k]); })); return o; }
+function summaryText(ref,status,parts){
+  const L=[(ref||"(new)")+" - "+((parts.requester||{}).title||""), "Status: "+(status||"New")];
+  ROLES.forEach(r=>{ const d=parts[r]; if(!d) return; L.push("","==== "+en(PARTS[r].label).toUpperCase()+" ====");
+    PARTS[r].sections.forEach(s=>{ const lines=s.fields.map(f=>{ const v=valText(f,d[f.k]); return v?(f.type==="rep"?v:en(f.label)+": "+v):""; }).filter(Boolean); if(lines.length){ L.push("","-- "+en(s.title)); L.push(...lines); } }); });
+  return L.join("\n");
+}
+function missingFields(r,data){ return fields(r).filter(f=>f.req&&!String(data[f.k]||"").trim()); }
+async function call(payload){
+  if(!SCRIPT_URL){ toast(t(UI.notConnected).replace(/<[^>]+>/g,"")); return null; }
+  try{ const res=await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({...payload,website:($("#f-website")||{}).value||""})}); return await res.json(); }   /* text/plain body: no CORS preflight - Ahmed Gaid */
+  catch(e){ toast(t(UI.err.net)); return null; }
+}
+function showErr(out){ toast(t(UI.err[out.error]||UI.err.server)); }
+
+/* ---------- actions ---------- */
+async function openRequest(){
+  const ref=refInput.trim().toUpperCase(), code=codes[role].trim();
+  if(!ref||!code){ toast(t(UI.fill)+" "+t(UI.ref)+", "+t(UI.code)); return; }
+  const out=await call({action:"get",ref,code}); if(!out) return;
+  if(!out.ok){ showErr(out); return; }
+  if(out.role!==role){ toast(t(UI.wrongRoleCode)); }
+  current=out.request; refInput=current.ref; statusSel="";
+  ROLES.forEach(r=>forms[r]=JSON.parse(JSON.stringify({...blank(r),...(current.parts[r]||{})})));
+  pending[role]=[]; render(); toast(t(UI.opened)); window.scrollTo({top:0});
+}
+async function sendNew(){
+  const code=codes.requester.trim(), miss=missingFields("requester",forms.requester);
+  if(!code) miss.push({label:UI.code});
+  if(miss.length){ toast(t(UI.fill)+" "+miss.map(f=>t(f.label)).join(", ")); return; }
+  if(pending.requester.reduce((s,f)=>s+f.file.size,0)>25*1048576){ toast(t(UI.err.too_large)); return; }
+  const btn=$("#btn-send"); btn.disabled=true; $("#bar-msg").textContent=t(UI.sending);
+  const part=cleanPart("requester",forms.requester);
+  const out=await call({action:"submit",code,part,flat:flatPart("requester",part),files:await filesPayload(),summary:summaryText("",  "New",{requester:part})});
+  btn.disabled=false; if($("#bar-msg")) $("#bar-msg").textContent=t(UI.draftNote);
+  if(!out) return; if(!out.ok){ showErr(out); return; }
+  sentText=summaryText(out.ref,"New",{requester:part});
+  sentRef={ref:out.ref,email:part.email,files:out.files};
+  forms.requester=blank("requester"); pending.requester.forEach(f=>f.preview&&URL.revokeObjectURL(f.preview)); pending.requester=[]; clearDraft();
+  render(); window.scrollTo({top:0});
+}
+async function savePart(){
+  const code=codes[role].trim(), miss=missingFields(role,forms[role]);
+  if(!code) miss.push({label:UI.code});
+  if(miss.length){ toast(t(UI.fill)+" "+miss.map(f=>t(f.label)).join(", ")); return; }
+  if(pending[role].reduce((s,f)=>s+f.file.size,0)>25*1048576){ toast(t(UI.err.too_large)); return; }
+  const btn=$("#btn-save"); btn.disabled=true; $("#bar-msg").textContent=t(UI.sending);
+  const part=cleanPart(role,forms[role]), status=role==="requester"?current.status:(statusSel||current.status);
+  const parts={...current.parts,[role]:part};
+  const out=await call({action:"save",ref:current.ref,code,role,part,flat:flatPart(role,part),status,files:await filesPayload(),summary:summaryText(current.ref,status,parts)});
+  btn.disabled=false;
+  if(!out){ renderBar(); return; } if(!out.ok){ showErr(out); renderBar(); return; }
+  current=out.request; statusSel=""; pending[role].forEach(f=>f.preview&&URL.revokeObjectURL(f.preview)); pending[role]=[];
+  ROLES.forEach(r=>forms[r]=JSON.parse(JSON.stringify({...blank(r),...(current.parts[r]||{})})));
+  render(); toast(t(UI.saved));
+}
+function loadExample(){
+  forms.requester={...blank("requester"),_example:true,title:"Pay Item Delivery & Contract Security Expiry Alert Report",module:"PO",ou:"Projects_OPU",priority:"High",requester:lang==="ar"?"(مثال) اسمك":"(example) Your name",dept:"Procurement",
+    purpose:"Show PO lines and pay items that are past the need-by date and not fully received, and contractor guarantees and promissory notes that are close to expiry or expired.",
+    readers:"Buyers, procurement manager",frequency:"Weekly",
+    sources:[{kind:"Screen (navigation path)",name:"Purchasing > Purchase Orders > Purchase Orders > Shipments",note:"Need-by date, received quantity of pay items"},
+             {kind:"View",name:"XXPBI.XX_PBI_PO_DETAIL_V15",note:"PO lines, ordered, received and remaining amounts"},
+             {kind:"Excel / outside EBS",name:"Guarantees register (finance)",note:"Guarantee type, bank, reference, issue and expiry date, amount"}],
+    params:[{name:"Operating Unit",type:"List of values",req:"No",def:"My operating units"},{name:"Need-by Date From / To",type:"Date range",req:"No",def:""},{name:"Expiry Alert Window (days)",type:"List of values",req:"Yes",def:"30"},{name:"As-of Date",type:"Date",req:"Yes",def:"Today"}],
+    columns:[{header:"PO Number",source:"PO screen",note:""},{header:"Need-by Date",source:"Shipments",note:""},{header:"Remaining Amount",source:"",note:"Ordered minus received"},{header:"Days to Expiry",source:"Guarantees register",note:"Expiry date minus as-of date"}],
+    formats:["Excel","PDF"],language:"Arabic and English",orientation:"Landscape",grouping:"Group by PO. Sort by need-by date, oldest first. Total remaining amount per PO.",
+    rules:"Flag lines where the need-by date is before the PO creation date. Show missing or invalid expiry dates clearly.",security:"Each user sees only the operating units of their responsibility.",
+    example:"PO 49269",onUat:"No, only on PROD",expected:"3 overdue, not received lines. Remaining amount 19,000."};
+  render(); window.scrollTo({top:0});
+}
+async function copyText(s){
+  try{ await navigator.clipboard.writeText(s); toast(t(UI.copied)); }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=s; ta.style.cssText="position:fixed;inset:auto 0 0 0;height:40vh;z-index:30"; document.body.appendChild(ta); ta.select(); ta.onblur=()=>ta.remove(); ta.focus(); }
+}
+
+/* ---------- boot ---------- */
+loadPrefs(); loadDraft();
+const qs=new URLSearchParams(location.search); if(qs.get("ref")) refInput=qs.get("ref");
+if(qs.get("lang")==="ar"||qs.get("lang")==="en") lang=qs.get("lang");
+if(ROLES.includes(qs.get("role"))) role=qs.get("role");
+render();
+})();
+</script>
+</body>
+</html>
