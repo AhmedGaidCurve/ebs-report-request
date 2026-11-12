@@ -556,6 +556,13 @@ function cleanPart(r,data){ const o=JSON.parse(JSON.stringify(data)); delete o._
   fields(r).forEach(f=>{ if(f.type==="rep") o[f.k]=(o[f.k]||[]).filter(x=>f.cols.some(c=>c.type!=="select"&&String(x[c.k]||"").trim())); else if(typeof o[f.k]==="string") o[f.k]=o[f.k].trim(); }); return o; }
 function valText(f,v){ if(f.type==="rep") return (v||[]).map((x,i)=>(i+1)+". "+f.cols.map(c=>c.type==="select"?optEn(c.opts,x[c.k]):x[c.k]).filter(Boolean).join(" | ")).join("\n");
   if(f.type==="checks") return (v||[]).map(x=>optEn(f.opts,x)).join(", "); if(f.type==="select") return v?optEn(f.opts,v):""; return v||""; }
+/* structured English + Arabic copy of a part, used by the script to build the HTML emails - Ahmed Gaid */
+function optBi(opts,v){ const o=(opts||[]).find(x=>x[0]===v); return o?(o[1]===o[2]?o[1]:o[1]+" / "+o[2]):v; }
+function docPart(r,data){ return {label:PARTS[r].label, sections:PARTS[r].sections.map(s=>({title:s.title, items:s.fields.map(f=>{ const v=data[f.k];
+    if(f.type==="rep"){ const rows=(v||[]).map(x=>f.cols.map(c=>c.type==="select"?String(optBi(c.opts,x[c.k])||""):String(x[c.k]||"")));
+      return rows.length?{label:f.label||s.title,cols:f.cols.map(c=>c.label||[c.k,c.k]),rows}:null; }
+    const txt=f.type==="checks"?(v||[]).map(x=>optBi(f.opts,x)).join(", "):f.type==="select"?(v?String(optBi(f.opts,v)):""):String(v||"");
+    return txt.trim()?{label:f.label,text:txt}:null; }).filter(Boolean)})).filter(s=>s.items.length)}; }
 function flatPart(r,data){ const o={}; PARTS[r].sections.forEach(s=>s.fields.forEach(f=>{ o[f.type==="rep"?en(s.title):en(f.label)]=valText(f,data[f.k]); })); return o; }
 function summaryText(ref,status,parts){
   const L=[(ref||"(new)")+" - "+((parts.requester||{}).title||""), "Status: "+(status||"New")];
@@ -589,7 +596,7 @@ async function sendNew(){
   if(pending.requester.reduce((s,f)=>s+f.file.size,0)>25*1048576){ toast(t(UI.err.too_large)); return; }
   const btn=$("#btn-send"); btn.disabled=true; $("#bar-msg").textContent=t(UI.sending);
   const part=cleanPart("requester",forms.requester);
-  const out=await call({action:"submit",code,part,flat:flatPart("requester",part),files:await filesPayload(),summary:summaryText("",  "New",{requester:part})});
+  const out=await call({action:"submit",code,part,flat:flatPart("requester",part),doc:docPart("requester",part),files:await filesPayload(),summary:summaryText("",  "New",{requester:part})});
   btn.disabled=false; if($("#bar-msg")) $("#bar-msg").textContent=t(UI.draftNote);
   if(!out) return; if(!out.ok){ showErr(out); return; }
   sentText=summaryText(out.ref,"New",{requester:part});
@@ -605,7 +612,7 @@ async function savePart(){
   const btn=$("#btn-save"); btn.disabled=true; $("#bar-msg").textContent=t(UI.sending);
   const part=cleanPart(role,forms[role]), status=role==="requester"?current.status:(statusSel||current.status);
   const parts={...current.parts,[role]:part};
-  const out=await call({action:"save",ref:current.ref,code,role,part,flat:flatPart(role,part),status,files:await filesPayload(),summary:summaryText(current.ref,status,parts)});
+  const out=await call({action:"save",ref:current.ref,code,role,part,flat:flatPart(role,part),doc:docPart(role,part),status,files:await filesPayload(),summary:summaryText(current.ref,status,parts)});
   btn.disabled=false;
   if(!out){ renderBar(); return; } if(!out.ok){ showErr(out); renderBar(); return; }
   current=out.request; statusSel=""; pending[role].forEach(f=>f.preview&&URL.revokeObjectURL(f.preview)); pending[role]=[];
